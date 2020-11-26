@@ -516,7 +516,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                     }
                 });
                 s.spawn(move |_| {
-                    let _gpu_lock = GPU_LOCK.lock().unwrap();
+                    // let _gpu_lock = GPU_LOCK.lock().unwrap();
                     let mut column_tree_builder = ColumnTreeBuilder::<ColumnArity, TreeArity>::new(
                         Some(BatcherType::GPU),
                         nodes_count,
