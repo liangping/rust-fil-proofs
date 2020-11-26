@@ -527,38 +527,41 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                     // Loop until all trees for all configs have been built.
                     for i in 0..config_count {
-                        let (columns, is_final): (Vec<GenericArray<Fr, ColumnArity>>, bool) =
-                            builder_rx.recv().expect("failed to recv columns");
+                        loop {
+                            let (columns, is_final): (Vec<GenericArray<Fr, ColumnArity>>, bool) =
+                                builder_rx.recv().expect("failed to recv columns");
 
-                        // Just add non-final column batches.
-                        if !is_final {
-                            column_tree_builder
-                                .add_columns(&columns)
-                                .expect("failed to add columns");
-                            continue;
-                        };
+                            // Just add non-final column batches.
+                            if !is_final {
+                                column_tree_builder
+                                    .add_columns(&columns)
+                                    .expect("failed to add columns");
+                                continue;
+                            };
 
-                        // If we get here, this is a final column: build a sub-tree.
-                        let (base_data, tree_data) = column_tree_builder
-                            .add_final_columns(&columns)
-                            .expect("failed to add final columns");
-                        trace!(
-                            "base data len {}, tree data len {}",
-                            base_data.len(),
-                            tree_data.len()
-                        );
+                            // If we get here, this is a final column: build a sub-tree.
+                            let (base_data, tree_data) = column_tree_builder
+                                .add_final_columns(&columns)
+                                .expect("failed to add final columns");
+                            trace!(
+                                "base data len {}, tree data len {}",
+                                base_data.len(),
+                                tree_data.len()
+                            );
 
-                        let tree_len = base_data.len() + tree_data.len();
-                        info!(
-                            "persisting base tree_c {}/{} of length {}",
-                            i + 1,
-                            tree_count,
-                            tree_len,
-                        );
+                            let tree_len = base_data.len() + tree_data.len();
+                            info!(
+                                "persisting base tree_c {}/{} of length {}",
+                                i + 1,
+                                tree_count,
+                                tree_len,
+                            );
 
-                        writer_tx
-                            .send((base_data, tree_data))
-                            .expect("failed to send base_data, tree_data");
+                            writer_tx
+                                .send((base_data, tree_data))
+                                .expect("failed to send base_data, tree_data");
+                            break;
+                        }
                     }
                 });
 
@@ -804,28 +807,31 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                     // Loop until all trees for all configs have been built.
                     for i in 0..config_count {
-                        let (encoded, is_final) =
-                            builder_rx.recv().expect("failed to recv encoded data");
+                        loop {
+                            let (encoded, is_final) =
+                                builder_rx.recv().expect("failed to recv encoded data");
 
-                        // Just add non-final leaf batches.
-                        if !is_final {
-                            tree_builder
-                                .add_leaves(&encoded)
-                                .expect("failed to add leaves");
-                            continue;
-                        };
+                            // Just add non-final leaf batches.
+                            if !is_final {
+                                tree_builder
+                                    .add_leaves(&encoded)
+                                    .expect("failed to add leaves");
+                                continue;
+                            };
 
-                        // If we get here, this is a final leaf batch: build a sub-tree.
-                        info!(
-                            "building base tree_r_last with GPU {}/{}",
-                            i + 1,
-                            tree_count
-                        );
-                        let (_, tree_data) = tree_builder
-                            .add_final_leaves(&encoded)
-                            .expect("failed to add final leaves");
+                            // If we get here, this is a final leaf batch: build a sub-tree.
+                            info!(
+                                "building base tree_r_last with GPU {}/{}",
+                                i + 1,
+                                tree_count
+                            );
+                            let (_, tree_data) = tree_builder
+                                .add_final_leaves(&encoded)
+                                .expect("failed to add final leaves");
 
-                        writer_tx.send(tree_data).expect("failed to send tree_data");
+                            writer_tx.send(tree_data).expect("failed to send tree_data");
+                            break;
+                        }
                     }
                 });
 
@@ -1377,8 +1383,8 @@ mod tests {
     use rand::{Rng, SeedableRng};
     use rand_xorshift::XorShiftRng;
     use storage_proofs_core::{
-        drgraph::BASE_DEGREE, fr32::fr_into_bytes, merkle::MerkleTreeTrait, proof::ProofScheme,
-        table_tests, test_helper::setup_replica,
+        api_version::ApiVersion, drgraph::BASE_DEGREE, fr32::fr_into_bytes,
+        merkle::MerkleTreeTrait, proof::ProofScheme, table_tests, test_helper::setup_replica,
     };
 
     use crate::stacked::{PrivateInputs, SetupParams, EXP_DEGREE};
@@ -1477,6 +1483,7 @@ mod tests {
             expansion_degree: EXP_DEGREE,
             porep_id: [32; 32],
             layer_challenges: layer_challenges.clone(),
+            api_version: ApiVersion::V1_1_0,
         };
 
         let pp = StackedDrg::<Tree, Blake2sHasher>::setup(&sp).expect("setup failed");
@@ -1583,6 +1590,7 @@ mod tests {
             expansion_degree: EXP_DEGREE,
             porep_id: [32; 32],
             layer_challenges: layer_challenges.clone(),
+            api_version: ApiVersion::V1_1_0,
         };
 
         let pp = StackedDrg::<Tree, Blake2sHasher>::setup(&sp).expect("setup failed");
@@ -1788,6 +1796,7 @@ mod tests {
             expansion_degree,
             porep_id: arbitrary_porep_id,
             layer_challenges: challenges,
+            api_version: ApiVersion::V1_1_0,
         };
 
         let pp = StackedDrg::<Tree, Blake2sHasher>::setup(&sp).expect("setup failed");
@@ -1867,6 +1876,7 @@ mod tests {
             expansion_degree,
             porep_id: [32; 32],
             layer_challenges,
+            api_version: ApiVersion::V1_1_0,
         };
 
         // When this fails, the call to setup should panic, but seems to actually hang (i.e. neither return nor panic) for some reason.
@@ -1891,6 +1901,7 @@ mod tests {
             layers,
             replica_id,
             legacy_porep_id,
+            ApiVersion::V1_0_0,
             Fr::from_repr(FrRepr([
                 0xd3faa96b9a0fba04,
                 0xea81a283d106485e,
@@ -1905,6 +1916,7 @@ mod tests {
             layers,
             replica_id,
             legacy_porep_id,
+            ApiVersion::V1_0_0,
             Fr::from_repr(FrRepr([
                 0x7e191e52c4a8da86,
                 0x5ae8a1c9e6fac148,
@@ -1919,6 +1931,7 @@ mod tests {
             layers,
             replica_id,
             porep_id,
+            ApiVersion::V1_1_0,
             Fr::from_repr(FrRepr([
                 0xabb3f38bb70defcf,
                 0x777a2e4d7769119f,
@@ -1933,6 +1946,7 @@ mod tests {
             layers,
             replica_id,
             porep_id,
+            ApiVersion::V1_1_0,
             Fr::from_repr(FrRepr([
                 0x22ab81cf68c4676d,
                 0x7a77a82fc7c9c189,
@@ -1948,6 +1962,7 @@ mod tests {
         layers: usize,
         replica_id: [u8; 32],
         porep_id: [u8; 32],
+        api_version: ApiVersion,
         expected_last_label: Fr,
     ) {
         let nodes = sector_size / NODE_SIZE;
@@ -1965,6 +1980,7 @@ mod tests {
             BASE_DEGREE,
             EXP_DEGREE,
             porep_id,
+            api_version,
         )
         .unwrap();
 
