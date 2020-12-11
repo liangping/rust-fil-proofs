@@ -9,7 +9,7 @@ repository = "https://github.com/filecoin-project/rust-fil-proofs"
 readme = "README.md"
 
 [dependencies]
-bellperson = { version = "0.12.3", default-features = false }
+bellperson = { git="https://github.com/liangping/bellperson.git", version = "0.12.3", default-features = false }
 generic-array = "0.14.4"
 merkletree = "0.21.0"
 ff = { version = "0.2.3", package = "fff" }
@@ -17,7 +17,7 @@ anyhow = "1.0.34"
 serde = "1.0.117"
 rand = "0.7.3"
 
-neptune = { version = "2.2.0", default-features = false, optional = true }
+neptune = {git="https://github.com/liangping/neptune.git", version = "2.2.0", default-features = false, optional = true }
 lazy_static = { version = "1.4.0", optional = true }
 blake2s_simd = { version = "0.5.11", optional = true }
 sha2 = { version = "0.9.2", optional = true }
