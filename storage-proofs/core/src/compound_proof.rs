@@ -251,11 +251,13 @@ where
             })
             .collect::<Result<Vec<_>>>()?;
 
+        info!("groth_proof start");
         let groth_proofs = if priority {
             groth16::create_random_proof_batch_in_priority(circuits, groth_params, &mut rng)?
         } else {
             groth16::create_random_proof_batch(circuits, groth_params, &mut rng)?
         };
+        info!("groth_proof end");
 
         groth_proofs
             .into_iter()

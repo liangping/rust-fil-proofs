@@ -17,6 +17,8 @@ use tempfile::NamedTempFile;
 
 use filecoin_proofs::types::*;
 use filecoin_proofs::*;
+use std::time::{Instant, SystemTime};
+use failure::_core::time::Duration;
 
 // Use a fixed PoRep ID, so that the parents cache can be re-used between some tests.
 // Note however, that parents caches cannot be shared when testing the differences
@@ -105,16 +107,16 @@ fn test_seal_lifecycle_32kib_top_8_8_2() -> Result<()> {
 
 // These tests are good to run, but take a long time.
 
-//#[test]
-//#[ignore]
-//fn test_seal_lifecycle_512mib_porep_id_v1_top_8_0_0_api_v1() -> Result<()> {
-//    let porep_id_v1: u64 = 2; // This is a RegisteredSealProof value
-//
-//    let mut porep_id = [0u8; 32];
-//    porep_id[..8].copy_from_slice(&porep_id_v1.to_le_bytes());
-//    assert!(is_legacy_porep_id(porep_id));
-//    seal_lifecycle::<SectorShape512MiB>(SECTOR_SIZE_512_MIB, &porep_id, ApiVersion::V1_0_0)
-//}
+#[test]
+#[ignore]
+fn test_seal_lifecycle_512mib_porep_id_v1_top_8_0_0_api_v1() -> Result<()> {
+   let porep_id_v1: u64 = 2; // This is a RegisteredSealProof value
+
+   let mut porep_id = [0u8; 32];
+   porep_id[..8].copy_from_slice(&porep_id_v1.to_le_bytes());
+   assert!(is_legacy_porep_id(porep_id));
+   seal_lifecycle::<SectorShape512MiB>(SECTOR_SIZE_512_MIB, &porep_id, ApiVersion::V1_0_0)
+}
 
 //#[test]
 //#[ignore]
@@ -1027,30 +1029,32 @@ fn proof_and_unseal<Tree: 'static + MerkleTreeTrait>(
 
     clear_cache::<Tree>(cache_dir_path)?;
 
+    let start = SystemTime::now();
     let commit_output = seal_commit_phase2(config, phase1_output, prover_id, sector_id)?;
+    println!("{:?}", SystemTime::now().duration_since(start).expect(""));
 
-    let _ = unseal_range::<_, _, _, Tree>(
-        config,
-        cache_dir_path,
-        sealed_sector_file,
-        &unseal_file,
-        prover_id,
-        sector_id,
-        comm_d,
-        ticket,
-        UnpaddedByteIndex(508),
-        UnpaddedBytesAmount(508),
-    )?;
+    // let _ = unseal_range::<_, _, _, Tree>(
+    //     config,
+    //     cache_dir_path,
+    //     sealed_sector_file,
+    //     &unseal_file,
+    //     prover_id,
+    //     sector_id,
+    //     comm_d,
+    //     ticket,
+    //     UnpaddedByteIndex(508),
+    //     UnpaddedBytesAmount(508),
+    // )?;
+    //
+    // unseal_file.seek(SeekFrom::Start(0))?;
 
-    unseal_file.seek(SeekFrom::Start(0))?;
-
-    let mut contents = vec![];
-    assert!(
-        unseal_file.read_to_end(&mut contents).is_ok(),
-        "failed to populate buffer with unsealed bytes"
-    );
-    assert_eq!(contents.len(), 508);
-    assert_eq!(&piece_bytes[508..508 + 508], &contents[..]);
+    // let mut contents = vec![];
+    // assert!(
+    //     unseal_file.read_to_end(&mut contents).is_ok(),
+    //     "failed to populate buffer with unsealed bytes"
+    // );
+    // assert_eq!(contents.len(), 508);
+    // assert_eq!(&piece_bytes[508..508 + 508], &contents[..]);
 
     let computed_comm_d = compute_comm_d(config.sector_size, &piece_infos)?;
 

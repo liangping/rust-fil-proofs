@@ -51,7 +51,7 @@ impl Default for Settings {
             parameter_cache: "/var/tmp/filecoin-proof-parameters/".to_string(),
             parent_cache: cache("filecoin-parents"),
             use_multicore_sdr: false,
-            multicore_sdr_producers: 3,
+            multicore_sdr_producers: 6,
             multicore_sdr_producer_stride: 128,
             multicore_sdr_lookahead: 800,
         }
