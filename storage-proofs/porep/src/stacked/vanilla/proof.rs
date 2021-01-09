@@ -474,7 +474,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                         let mut node_index = 0;
                         let builder_tx = builder_tx.clone();
-                        while node_index != nodes_count {x
+                        while node_index != nodes_count {
                             let chunked_nodes_count =
                                 std::cmp::min(nodes_count - node_index, max_gpu_column_batch_size);
                             trace!(
