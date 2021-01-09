@@ -467,8 +467,8 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                 // This channel will receive the finished tree data to be written to disk.
                 let (writer_tx, writer_rx) = mpsc::sync_channel::<(Vec<Fr>, Vec<Fr>)>(0);
 
-                s.spawn(move |_| {
-                    for i in 0..config_count {
+                // s.spawn(move |_| {
+                    for i in (0..config_count).into_par_iter() {
 
                         println!("Loops 1 in {}/{}", i, config_count);
 
@@ -535,8 +535,8 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                                 .expect("failed to send columns");
                         }
                     }
-                });
-                s.spawn(move |_| {
+                //});
+                // s.spawn(move |_| {
                     // let _gpu_lock = GPU_LOCK.lock().unwrap();
                     let mut column_tree_builder = ColumnTreeBuilder::<ColumnArity, TreeArity>::new(
                         Some(BatcherType::GPU),
@@ -547,7 +547,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                     .expect("failed to create ColumnTreeBuilder");
 
                     // Loop until all trees for all configs have been built.
-                    for i in 0..config_count {
+                    for i in (0..config_count).into_par_iter() {
                         println!("Loops 2 in {}/{}", i, config_count);
                         loop {
                             let (columns, is_final): (Vec<GenericArray<Fr, ColumnArity>>, bool) =
@@ -652,7 +652,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
             create_disk_tree::<
                 DiskTree<Tree::Hasher, Tree::Arity, Tree::SubTreeArity, Tree::TopTreeArity>,
             >(configs[0].size.expect("config size failure"), &configs)
-        })
+        // })
     }
 
     fn generate_tree_c_cpu<ColumnArity, TreeArity>(
