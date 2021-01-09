@@ -140,16 +140,16 @@ fn test_seal_lifecycle_512mib_porep_id_v1_top_8_0_0_api_v1() -> Result<()> {
 //    seal_lifecycle::<SectorShape32GiB>(SECTOR_SIZE_32_GIB, &porep_id, ApiVersion::V1_0_0)
 //}
 
-//#[test]
-//#[ignore]
-//fn test_seal_lifecycle_32gib_porep_id_v1_1_top_8_8_0_api_v1_1() -> Result<()> {
-//    let porep_id_v1_1: u64 = 8; // This is a RegisteredSealProof value
-//
-//    let mut porep_id = [0u8; 32];
-//    porep_id[..8].copy_from_slice(&porep_id_v1_1.to_le_bytes());
-//    assert!(!is_legacy_porep_id(porep_id));
-//    seal_lifecycle::<SectorShape32GiB>(SECTOR_SIZE_32_GIB, &porep_id, ApiVersion::V1_1_0)
-//}
+#[test]
+#[ignore]
+fn test_seal_lifecycle_32gib_porep_id_v1_1_top_8_8_0_api_v1_1() -> Result<()> {
+   let porep_id_v1_1: u64 = 8; // This is a RegisteredSealProof value
+
+   let mut porep_id = [0u8; 32];
+   porep_id[..8].copy_from_slice(&porep_id_v1_1.to_le_bytes());
+   assert!(!is_legacy_porep_id(porep_id));
+   seal_lifecycle::<SectorShape32GiB>(SECTOR_SIZE_32_GIB, &porep_id, ApiVersion::V1_1_0)
+}
 
 //#[test]
 //#[ignore]
@@ -183,7 +183,7 @@ fn seal_lifecycle<Tree: 'static + MerkleTreeTrait>(
     let mut prover_id = [0u8; 32];
     prover_id.copy_from_slice(AsRef::<[u8]>::as_ref(&prover_fr));
 
-    create_seal::<_, Tree>(rng, sector_size, prover_id, false, porep_id, api_version)?;
+    create_seal::<_, Tree>(rng, sector_size, prover_id, true, porep_id, api_version)?;
     Ok(())
 }
 
