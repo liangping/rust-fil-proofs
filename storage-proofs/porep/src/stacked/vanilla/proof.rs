@@ -560,17 +560,20 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                     // Loop until all trees for all configs have been built.
                     for i in 0..config_count {
+                    //(0..config_count).into_par_iter().for_each(|i| {
                         loop {
                             let (columns, is_final): (Vec<GenericArray<Fr, ColumnArity>>, bool) =
                                 builder_rx.recv().expect("failed to recv columns");
 
                             // Just add non-final column batches.
                             if !is_final {
-                                info!("start of add column: {}", i);
-                                column_tree_builder
-                                    .add_columns(&columns)
-                                    .expect("failed to add columns");
-                                info!("end of add column {}", i);
+                                rayon::scope(|s| {
+                                    s.spawn(|_| {
+                                        column_tree_builder
+                                            .add_columns(&columns)
+                                            .expect("failed to add columns");
+                                    });
+                                });
                                 continue;
                             };
 
@@ -597,7 +600,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                                 .expect("failed to send base_data, tree_data");
                             break;
                         }
-                    }
+                    };
                 });
 
                 for config in &configs {
@@ -1541,23 +1544,4 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
         Ok((comm_r, p_aux))
     }
-}
-
-#[test]
-fn test(){
-    use std::sync::mpsc;
-
-    let (tx, rx) = mpsc::sync_channel(100000);
-
-    (0..100).into_par_iter().for_each(|i| {
-        tx.send(i).unwrap();
-    });
-
-    // Drop it here
-    drop(tx);
-
-    for chunk in rx {
-        println!("{}", chunk);
-    }
-
 }
