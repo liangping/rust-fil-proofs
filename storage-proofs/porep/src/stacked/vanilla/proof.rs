@@ -468,8 +468,8 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                 let (writer_tx, writer_rx) = mpsc::sync_channel::<(Vec<Fr>, Vec<Fr>)>(0);
 
                 s.spawn(move |_| {
-                    for i in 0..config_count {
-                    //(0..config_count).into_par_iter().for_each(|i| {
+                    //for i in 0..config_count {
+                    (0..config_count).into_par_iter().for_each(|i| {
                         let mut node_index = 0;
                         let builder_tx = builder_tx.clone();
                         while node_index != nodes_count {
@@ -489,26 +489,6 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                             // Allocate layer data array and insert a placeholder for each layer.
                             let mut layer_data: Vec<Vec<Fr>> =
                                 vec![Vec::with_capacity(chunked_nodes_count); layers];
-
-                            // rayon::scope(|s| {
-                            //     // capture a shadowed version of layer_data.
-                            //     let layer_data: &mut Vec<_> = &mut layer_data;
-                            //
-                            //     // gather all layer data in parallel.
-                            //     s.spawn(move |_| {
-                            //         for (layer_index, layer_elements) in
-                            //             layer_data.iter_mut().enumerate()
-                            //         {
-                            //             let store = labels.labels_for_layer(layer_index + 1);
-                            //             let start = (i * nodes_count) + node_index;
-                            //             let end = start + chunked_nodes_count;
-                            //             let elements: Vec<<Tree::Hasher as Hasher>::Domain> = store
-                            //                 .read_range(std::ops::Range { start, end })
-                            //                 .expect("failed to read store range");
-                            //             layer_elements.extend(elements.into_iter().map(Into::into));
-                            //         }
-                            //     });
-                            // });
 
                             // capture a shadowed version of layer_data.
                             let layer_data: &mut Vec<_> = &mut layer_data;
@@ -546,7 +526,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                                 .send((columns, is_final))
                                 .expect("failed to send columns");
                         }
-                    }
+                    });
                 });
                 s.spawn(move |_| {
                     // let _gpu_lock = GPU_LOCK.lock().unwrap();
