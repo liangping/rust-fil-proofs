@@ -543,7 +543,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                     //(0..config_count).into_par_iter().for_each(|i| {
                         loop {
                             let (columns, is_final): (Vec<GenericArray<Fr, ColumnArity>>, bool) =
-                                builder_rx.try_recv().expect("failed to recv columns");
+                                builder_rx.recv().expect("failed to recv columns");
 
                             // Just add non-final column batches.
                             if !is_final {
