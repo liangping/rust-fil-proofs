@@ -469,7 +469,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                 s.spawn(move |_| {
                     //for i in 0..config_count {
-                    (0..config_count).into_par_iter().for_each(|i| {
+                    (0..config_count).into_iter().for_each(|i| {
                         let mut node_index = 0;
                         let builder_tx = builder_tx.clone();
                         while node_index != nodes_count {
@@ -523,60 +523,88 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                             let is_final = node_index == nodes_count;
                             builder_tx
-                                .send((columns, is_final))
+                                .send((i, columns, is_final))
                                 .expect("failed to send columns");
                         }
                     });
                 });
                 s.spawn(move |_| {
-                    // let _gpu_lock = GPU_LOCK.lock().unwrap();
-                    let mut column_tree_builder = ColumnTreeBuilder::<ColumnArity, TreeArity>::new(
-                        Some(BatcherType::GPU),
-                        nodes_count,
-                        max_gpu_column_batch_size,
-                        max_gpu_tree_batch_size,
-                    )
-                    .expect("failed to create ColumnTreeBuilder");
-
-                    // Loop until all trees for all configs have been built.
+                    //let _gpu_lock = GPU_LOCK.lock().unwrap();
+                    let mut builders:Vec<ColumnTreeBuilder::<ColumnArity, TreeArity>> = Vec::with_capacity(config_count);
                     for i in 0..config_count {
-                    //(0..config_count).into_par_iter().for_each(|i| {
-                        loop {
-                            let (columns, is_final): (Vec<GenericArray<Fr, ColumnArity>>, bool) =
-                                builder_rx.recv().expect("failed to recv columns");
+                        builders[i] = ColumnTreeBuilder::<ColumnArity, TreeArity>::new(
+                            Some(BatcherType::GPU),
+                            nodes_count,
+                            max_gpu_column_batch_size,
+                            max_gpu_tree_batch_size,
+                        ).expect("failed to create ColumnTreeBuilder");
+                    }
 
-                            // Just add non-final column batches.
-                            if !is_final {
-                                column_tree_builder
-                                    .add_columns(&columns)
-                                    .expect("failed to add columns");
-                                continue;
-                            };
+                    let mut finals = Vec::with_capacity(config_count);
 
-                            // If we get here, this is a final column: build a sub-tree.
-                            let (base_data, tree_data) = column_tree_builder
-                                .add_final_columns(&columns)
-                                .expect("failed to add final columns");
-                            trace!(
-                                "base data len {}, tree data len {}",
-                                base_data.len(),
-                                tree_data.len()
-                            );
-
-                            let tree_len = base_data.len() + tree_data.len();
-                            info!(
-                                "persisting base tree_c {}/{} of length {}",
-                                i + 1,
-                                tree_count,
-                                tree_len,
-                            );
-
-                            writer_tx
-                                .send((base_data, tree_data))
-                                .expect("failed to send base_data, tree_data");
-                            break;
+                    builder_rx.iter().for_each(|(i, columns, is_final): (usize, Vec<GenericArray<Fr, ColumnArity>>, bool)|{
+                        if !is_final {
+                            builders[i].add_columns(&columns).expect("failed to add columns");
+                        }else{
+                            finals[i] = columns;
                         }
-                    };
+                    });
+
+                    for i in 0..config_count{
+                        let (base_data, tree_data) = builders[i]
+                            .add_final_columns(&finals[i])
+                            .expect("failed to add final columns");
+                        let tree_len = base_data.len() + tree_data.len();
+                        info!(
+                            "persisting base tree_c {}/{} of length {}",
+                            i + 1,
+                            tree_count,
+                            tree_len,
+                        );
+                        writer_tx
+                            .send((base_data, tree_data))
+                            .expect("failed to send base_data, tree_data");
+                    }
+
+                //     // Loop until all trees for all configs have been built.
+                //     for i in 0..config_count {
+                //     //(0..config_count).into_par_iter().for_each(|i| {
+                //         loop {
+                //             let (columns, is_final): (Vec<GenericArray<Fr, ColumnArity>>, bool) =
+                //                 builder_rx.recv().expect("failed to recv columns");
+                //
+                //             // Just add non-final column batches.
+                //             if !is_final {
+                //                 column_tree_builder
+                //                     .add_columns(&columns)
+                //                     .expect("failed to add columns");
+                //                 continue;
+                //             };
+                //
+                //             // If we get here, this is a final column: build a sub-tree.
+                //             let (base_data, tree_data) = column_tree_builder
+                //                 .add_final_columns(&columns)
+                //                 .expect("failed to add final columns");
+                //             trace!(
+                //                 "base data len {}, tree data len {}",
+                //                 base_data.len(),
+                //                 tree_data.len()
+                //             );
+                //
+                //             let tree_len = base_data.len() + tree_data.len();
+                //             info!(
+                //                 "persisting base tree_c {}/{} of length {}",
+                //                 i + 1,
+                //                 tree_count,
+                //                 tree_len,
+                //             );
+                //
+                //             writer_tx
+                //                 .send((base_data, tree_data))
+                //                 .expect("failed to send base_data, tree_data");
+                //             break;
+                //         }
+                //     };
                 });
 
                 for config in &configs {
