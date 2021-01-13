@@ -468,8 +468,7 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                 let (writer_tx, writer_rx) = mpsc::sync_channel::<(Vec<Fr>, Vec<Fr>)>(0);
 
                 s.spawn(move |_| {
-                    //for i in 0..config_count {
-                    (0..config_count).into_iter().for_each(|i| {
+                    (0..config_count).into_par_iter().for_each(|i| {
                         let mut node_index = 0;
                         let builder_tx = builder_tx.clone();
                         while node_index != nodes_count {
