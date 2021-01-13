@@ -531,33 +531,33 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                 s.spawn(move |_| {
                     //let _gpu_lock = GPU_LOCK.lock().unwrap();
                     let mut builders:Vec<ColumnTreeBuilder::<ColumnArity, TreeArity>> = Vec::with_capacity(config_count);
-                    for i in 0..config_count {
-                        builders[i] = ColumnTreeBuilder::<ColumnArity, TreeArity>::new(
+                    for _i in 0..config_count {
+                        builders.push(ColumnTreeBuilder::<ColumnArity, TreeArity>::new(
                             Some(BatcherType::GPU),
                             nodes_count,
                             max_gpu_column_batch_size,
                             max_gpu_tree_batch_size,
-                        ).expect("failed to create ColumnTreeBuilder");
+                        ).expect("failed to create ColumnTreeBuilder"));
                     }
 
-                    let mut finals = Vec::with_capacity(config_count);
+                    let mut final_columns = Vec::with_capacity(config_count);
 
                     builder_rx.iter().for_each(|(i, columns, is_final): (usize, Vec<GenericArray<Fr, ColumnArity>>, bool)|{
                         if !is_final {
                             builders[i].add_columns(&columns).expect("failed to add columns");
                         }else{
-                            finals[i] = columns;
+                            final_columns.push((i, columns));
                         }
                     });
 
-                    for i in 0..config_count{
-                        let (base_data, tree_data) = builders[i]
-                            .add_final_columns(&finals[i])
+                    for (idx, columns) in final_columns {
+                        let (base_data, tree_data) = builders[idx]
+                            .add_final_columns(&columns)
                             .expect("failed to add final columns");
                         let tree_len = base_data.len() + tree_data.len();
                         info!(
                             "persisting base tree_c {}/{} of length {}",
-                            i + 1,
+                            idx + 1,
                             tree_count,
                             tree_len,
                         );
