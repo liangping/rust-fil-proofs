@@ -543,7 +543,11 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                     builder_rx.iter().for_each(|(i, columns, is_final): (usize, Vec<GenericArray<Fr, ColumnArity>>, bool)|{
                         if !is_final {
-                            builders[i].add_columns(&columns).expect("failed to add columns");
+                            rayon::scope(|s2| {
+                                s2.spawn(|_|{
+                                    builders[i].add_columns(&columns).expect("failed to add columns");
+                                });
+                            });
                         }else{
                             final_columns.push((i, columns));
                         }
